@@ -1,13 +1,23 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:memo_lens/pages/gallery.dart';
+import 'package:memo_lens/pages/online.dart';
 import 'package:memo_lens/pages/welcome.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize the available cameras
+  final cameras = await availableCameras();
+  final firstCamera = cameras.isNotEmpty ? cameras.first : throw Exception('No cameras available');
+
+  runApp(MyApp(camera: firstCamera));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.camera});
+
+  final CameraDescription camera;
 
   @override
   Widget build(BuildContext context) {
@@ -17,44 +27,72 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'MemoLens'),
+      home: MyHomePage(title: 'MemoLens', camera: camera),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({super.key, required this.title, required this.camera});
 
   final String title;
+  final CameraDescription camera;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  bool _isLoggedIn = false;
+  String _name = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedName = prefs.getString('name');
+    setState(() {
+      _isLoggedIn = savedName != null && savedName.isNotEmpty;
+      _name = savedName ?? "";
+    });
+  }
+
   void _logIn(String name) {
-    if (name.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => GalleryPage(name: name),  // Pass the name here
-        ),
-      );
-    }
+    setState(() {
+      _isLoggedIn = true;
+      _name = name;
+    });
+    _saveNameToPrefs(name);
+  }
+
+  Future<void> _saveNameToPrefs(String name) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('name', name);
+  }
+
+  void _logOut() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('name');
+    setState(() {
+      _isLoggedIn = false;
+      _name = "";
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        centerTitle: true,
-        title: Text(
-          widget.title,
-          style: const TextStyle(color: Colors.white),
-        ),
-      ),
-      body: WelcomePage(onLogin: _logIn),
+    if (!_isLoggedIn) {
+      return WelcomePage(title: widget.title, logIn: _logIn);
+    }
+    return OnlinePage(
+      title: widget.title,
+      name: _name,
+      logOut: _logOut,
+      camera: widget.camera,
     );
   }
 }

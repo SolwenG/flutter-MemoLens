@@ -36,6 +36,8 @@ class PostCardState extends State<PostCard> {
 
   @override
   Widget build(BuildContext context) {
+    const darkBlue = Color(0xFF36618e);
+
     return Padding(
       padding: const EdgeInsets.all(5.0),
       child: Center(
@@ -57,7 +59,7 @@ class PostCardState extends State<PostCard> {
                   Text(
                     widget.item.text,
                     style: const TextStyle(
-                        fontSize: 18, fontStyle: FontStyle.italic),
+                        fontSize: 18, fontStyle: FontStyle.italic, color: darkBlue),
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -75,7 +77,7 @@ class PostCardState extends State<PostCard> {
                           ),
                         ),
                       ),
-                      Text(widget.item.date),
+                      Text(widget.item.date, style: const TextStyle(color: darkBlue)),
                     ],
                   ),
                 ],
